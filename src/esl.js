@@ -150,7 +150,7 @@ module.exports = class ESL extends EventEmitter {
   }
 
   _onSubscribed () {
-        this._client.on(`esl::event::${LIB_EVTS.DISCONNECT_NOTICE}`, this._onDisconnection.bind(this));
+    this._client.on(`esl::event::${LIB_EVTS.DISCONNECT_NOTICE}`, this._onDisconnection.bind(this));
     this._client.on(`esl::${LIB_EVTS.END}`, this._onDisconnection.bind(this));
     this._client.on(`esl::event::${ESL_EVENTS.HEARTBEAT}::*`, this._onHeartbeat.bind(this));
 

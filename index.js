@@ -56,21 +56,20 @@ const getBBBChannelType = (channelData) => {
 const metrics = buildMetrics(LABEL_FILTER_HASH);
 Agent.injectMetrics(metrics);
 
-const collector = async (response) => {
-  ESL.executeCommand('show channels as json').then(async (eslResponse) => {
-    const { rows = [] } = JSON.parse(eslResponse.getBody());
-
-    rows.forEach(async (row) => {
+const collectMediaStats = async (rows) => {
+  const chain = rows.map(async (row) => {
+      if (row == null || row.uuid == null) return Promise.resolve();
       const { uuid, dest, callstate } = row;
-      const bbbChannelType = getBBBChannelType(row);
-      const labels = {
-        ...(!LABEL_FILTER_HASH['uuid'] && { uuid }),
-        ...(!LABEL_FILTER_HASH['dest'] && { dest }),
-        ...(!LABEL_FILTER_HASH['callstate'] && { callstate }),
-        ...(!LABEL_FILTER_HASH['bbbChannelType'] && { bbbChannelType }),
-      };
 
       try {
+        const bbbChannelType = getBBBChannelType(row);
+        const labels = {
+          ...(!LABEL_FILTER_HASH['uuid'] && { uuid }),
+          ...(!LABEL_FILTER_HASH['dest'] && { dest }),
+          ...(!LABEL_FILTER_HASH['callstate'] && { callstate }),
+          ...(!LABEL_FILTER_HASH['bbbChannelType'] && { bbbChannelType }),
+        };
+
         const statsResp = await ESL.executeCommand(
           `json {"command":"mediaStats", "data": {"uuid":"${uuid}"}}`
         );
@@ -81,15 +80,34 @@ const collector = async (response) => {
         Object.entries(response.audio).forEach(([key, value]) => {
           Agent.set(key, value, labels);
         });
+
+        return Promise.resolve();
       } catch (error) {
         console.log(`mediaStats for ${uuid || "*Unknown*}"} failed`, error);
+        return Promise.resolve();
       }
-    });
-  }).catch((error) => {
-    console.error('show channels as json failed', error);
   });
 
-  return response;
+  return Promise.all(chain);
+}
+
+const collector = async (response) => {
+  const handleScrapeFailure = () => {
+    Agent.set('bbb_fs_scrape_status', 0);
+  };
+
+  try {
+    const eslResponse = await ESL.executeCommand('show channels as json')
+    Agent.reset();
+    const { rows = [] } = JSON.parse(eslResponse.getBody());
+    await collectMediaStats(rows);
+    Agent.set('bbb_fs_scrape_status', 1);
+    return response;
+  } catch (error) {
+    console.error('scrape failed', error);
+    handleScrapeFailure();
+    return response;
+  }
 }
 
 ESL.start().then(() => {

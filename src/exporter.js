@@ -15,6 +15,10 @@ const buildMetrics = (labelFilter) => {
 
   const metrics = {
     // Custom metrics
+    'bbb_fs_scrape_status': new Gauge({
+      name: 'bbb_fs_scrape_status',
+      help: 'Status of the last scrape (1 = success, 0 = failure)',
+    }),
     'bbb_fs_audio_channels': new Gauge({
       name: 'bbb_fs_audio_channels',
       help: 'Number of audio channels',
