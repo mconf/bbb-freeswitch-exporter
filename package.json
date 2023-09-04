@@ -1,6 +1,6 @@
 {
   "name": "bbb-freeswitch-exporter",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Prometheus Exporter for FreeSWITCH (as used in BigBlueButton)",
   "main": "index.js",
   "engines": {
